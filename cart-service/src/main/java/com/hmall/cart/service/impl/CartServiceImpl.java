@@ -1,5 +1,7 @@
 package com.hmall.cart.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -16,6 +18,8 @@ import com.hmall.common.utils.UserContext;
 
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cloud.client.ServiceInstance;
+import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
@@ -42,6 +46,7 @@ import java.util.stream.Collectors;
 public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements ICartService {
 
     private final RestTemplate restTemplate;
+    private final DiscoveryClient discoveryClient;
     @Override
     public void addItem2Cart(CartFormDTO cartFormDTO) {
         // 1.获取登录用户
@@ -87,9 +92,16 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements IC
         //todo 1.获取商品id
         Set<Long> itemIds = vos.stream().map(CartVO::getItemId).collect(Collectors.toSet());
         // 2.查询商品
-        // 发起http请求
+        // 根据服务名称获取服务实例列表
+        List<ServiceInstance> services = discoveryClient.getInstances("item-service");
+        if (CollUtils.isEmpty(services)) {
+            return;
+        }
+        // 负载均衡
+        ServiceInstance instance = services.get(RandomUtil.randomInt(services.size()));
+        // 发起远程调用
         ResponseEntity<List<ItemDTO>> response = restTemplate.exchange(
-                "http://localhost:8081/items?ids={ids}",
+                instance.getUri()+"/items?ids={ids}",
                 HttpMethod.GET,
                 null,
                 new ParameterizedTypeReference<List<ItemDTO>>() {
