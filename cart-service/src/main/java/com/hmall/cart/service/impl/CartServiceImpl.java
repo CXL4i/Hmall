@@ -4,6 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmall.cart.domain.dto.CartFormDTO;
+import com.hmall.cart.domain.dto.ItemDTO;
 import com.hmall.cart.domain.po.Cart;
 import com.hmall.cart.domain.vo.CartVO;
 import com.hmall.cart.mapper.CartMapper;
@@ -13,8 +14,13 @@ import com.hmall.common.utils.BeanUtils;
 import com.hmall.common.utils.CollUtils;
 import com.hmall.common.utils.UserContext;
 
+import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.Collection;
 import java.util.List;
@@ -35,8 +41,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements ICartService {
 
-    //private final IItemService itemService;
-
+    private final RestTemplate restTemplate;
     @Override
     public void addItem2Cart(CartFormDTO cartFormDTO) {
         // 1.获取登录用户
@@ -80,9 +85,22 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements IC
 
     private void handleCartItems(List<CartVO> vos) {
         //todo 1.获取商品id
-        /*Set<Long> itemIds = vos.stream().map(CartVO::getItemId).collect(Collectors.toSet());
+        Set<Long> itemIds = vos.stream().map(CartVO::getItemId).collect(Collectors.toSet());
         // 2.查询商品
-        List<ItemDTO> items = itemService.queryItemByIds(itemIds);
+        // 发起http请求
+        ResponseEntity<List<ItemDTO>> response = restTemplate.exchange(
+                "http://localhost:8081/items?ids={ids}",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<List<ItemDTO>>() {
+                },
+                Map.of("ids", StrUtil.join(",", itemIds))
+        );
+        // 解析响应
+        if (!response.getStatusCode().is2xxSuccessful()) {
+            return;
+        }
+        List<ItemDTO> items = response.getBody();
         if (CollUtils.isEmpty(items)) {
             return;
         }
@@ -97,7 +115,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements IC
             v.setNewPrice(item.getPrice());
             v.setStatus(item.getStatus());
             v.setStock(item.getStock());
-        }*/
+        }
     }
 
     @Override
