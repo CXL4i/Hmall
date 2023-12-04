@@ -112,6 +112,10 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements IC
             return;
         }*/
         List<ItemDTO> items = itemClient.queryItemByIds(itemIds);
+        if (CollUtils.isEmpty(items)) {
+            //可能为熔断降级，直接返回不抛异常
+            return;
+        }
         // 3.转为 id 到 item的map
         Map<Long, ItemDTO> itemMap = items.stream().collect(Collectors.toMap(ItemDTO::getId, Function.identity()));
         // 4.写入vo
