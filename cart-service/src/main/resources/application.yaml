@@ -18,5 +18,5 @@ hm:
   swagger:
     title: "购物车服务"
     desc: "购物车服务接口文档"
-    package: "com.huiminpay.cart.controller"
+    package: "com.hmall.cart.controller"
 # keytool -genkeypair -alias hmall -keyalg RSA -keypass hmall123 -keystore hmall.jks -storepass hmall123
