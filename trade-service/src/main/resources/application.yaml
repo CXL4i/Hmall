@@ -11,3 +11,14 @@ hm:
     title: "交易服务"
     desc: "交易服务接口文档"
     package: "com.hmall.trade.controller"
+  mq:
+    host: localhost
+    port: 5672
+    username: fzy
+    password: fengziyang
+#spring:
+#  rabbitmq:
+#    host: localhost
+#    port: 5672
+#    username: fzy
+#    password: fengziyang

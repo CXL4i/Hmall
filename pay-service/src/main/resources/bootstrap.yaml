@@ -1,6 +1,6 @@
 spring:
   application:
-    name: trade-service # 微服务名称
+    name: pay-service # 微服务名称
   profiles:
     active: dev
   cloud:
