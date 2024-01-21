@@ -33,3 +33,4 @@ build/
 .vscode/
 *.log
 /logs
+docker 启动.txt
