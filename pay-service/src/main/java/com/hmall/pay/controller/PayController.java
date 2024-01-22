@@ -1,10 +1,12 @@
 package com.hmall.pay.controller;
 
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.hmall.common.exception.BizIllegalException;
 import com.hmall.common.utils.BeanUtils;
 import com.hmall.pay.domain.dto.PayApplyDTO;
 import com.hmall.pay.domain.dto.PayOrderFormDTO;
+import com.hmall.pay.domain.po.PayOrder;
 import com.hmall.pay.domain.vo.PayOrderVO;
 import com.hmall.pay.enums.PayType;
 import com.hmall.pay.service.IPayOrderService;
@@ -23,6 +25,14 @@ import java.util.List;
 public class PayController {
 
     private final IPayOrderService payOrderService;
+    @GetMapping("status/{bizOrderNo}")
+    public Integer queryPayOrderStatus(@PathVariable Long bizOrderNo){
+        return payOrderService.lambdaQuery()
+                .eq(PayOrder::getBizOrderNo, bizOrderNo)
+                .getEntity()
+                .getStatus();
+    }
+
     @ApiOperation("查询支付单")
     @GetMapping
     public List<PayOrderVO> queryPayOrders(){

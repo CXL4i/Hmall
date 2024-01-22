@@ -1,5 +1,7 @@
 package com.hmall.trade.listeners;
 
+import com.hmall.trade.domain.po.Order;
+import com.hmall.trade.mapper.OrderMapper;
 import com.hmall.trade.service.IOrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.core.ExchangeTypes;
@@ -8,6 +10,8 @@ import org.springframework.amqp.rabbit.annotation.Queue;
 import org.springframework.amqp.rabbit.annotation.QueueBinding;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
 
 @Component
 @RequiredArgsConstructor
@@ -21,6 +25,11 @@ public class PayStatusListener {
     ))
     public void listenOrderPay(Long orderId) {
         //标记订单状态
-        orderService.markOrderPaySuccess(orderId);
+        orderService.lambdaUpdate()
+                .set(Order::getStatus, 2)
+                .set(Order::getPayTime, LocalDateTime.now())
+                .eq(Order::getStatus, 1)
+                .eq(Order::getId, orderId)
+                .update();
     }
 }

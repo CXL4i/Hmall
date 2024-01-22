@@ -1,11 +1,14 @@
 package com.hmall.trade.service.impl;
 
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmall.api.client.CartClient;
 import com.hmall.api.client.ItemClient;
 import com.hmall.api.dto.ItemDTO;
 import com.hmall.api.dto.OrderDetailDTO;
+import com.hmall.common.domain.MultiDelayMessage;
 import com.hmall.common.exception.BadRequestException;
 import com.hmall.common.utils.UserContext;
 import com.hmall.trade.domain.dto.OrderFormDTO;
@@ -26,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -92,6 +96,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         } catch (Exception e) {
             throw new RuntimeException("库存不足！");
         }
+        MultiDelayMessage<Long> msg = MultiDelayMessage.of(order.getId(), 60000, 60000, 60000, 60000);
+        // 5.延迟检测订单状态
+        rabbitTemplate.convertAndSend("trade.delay.topic","order.query",msg,message -> {
+            message.getMessageProperties().setDelay(msg.getNextDelayTime());
+            return message;
+        });
         return order.getId();
     }
 
@@ -102,6 +112,27 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setStatus(2);
         order.setPayTime(LocalDateTime.now());
         updateById(order);
+    }
+
+    @Override
+    @GlobalTransactional
+    public void cancelOrder(Long id) {
+        lambdaUpdate()
+                .set(Order::getStatus, 4)
+                .set(Order::getCloseTime, LocalDateTime.now())
+                .eq(Order::getStatus, 1)
+                .eq(Order::getId, id)
+                .update();
+        List<OrderDetail> details = detailService.list(new LambdaQueryWrapper<OrderDetail>().eq(OrderDetail::getOrderId, id));
+        // 恢复库存
+        List<OrderDetailDTO> detailDTOs = details.stream().map(orderDetail -> {
+            OrderDetailDTO orderDetailDTO = new OrderDetailDTO();
+            orderDetailDTO.setItemId(orderDetail.getItemId());
+            // 由于是取消订单，所以数量为负数
+            orderDetailDTO.setNum(-orderDetail.getNum());
+            return orderDetailDTO;
+        }).collect(Collectors.toList());
+        itemClient.deductStock(detailDTOs);
     }
 
     private List<OrderDetail> buildDetails(Long orderId, List<ItemDTO> items, Map<Long, Integer> numMap) {
